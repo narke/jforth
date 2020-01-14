@@ -224,20 +224,20 @@ token_get_next(FILE *fp, token_t *token)
 #define DICT_INIT_SIZE_CELLS 65536
 
 bool
-dict_init(dictionary_t *d, const char *fn)
+dict_init(dictionary_t *dictionary, const char *fn)
 {
-	d->here = (cell_t *)malloc(DICT_INIT_SIZE_CELLS * sizeof(cell_t));
-	if (!d->here)
+	dictionary->here = (cell_t *)malloc(DICT_INIT_SIZE_CELLS * sizeof(cell_t));
+	if (!dictionary->here)
 	{
 		fprintf(stderr, "Error allocating memory for dictionary.\n");
 		return false;
 	}
 
-	d->latest = NULL;
-	d->cells_remaining = DICT_INIT_SIZE_CELLS;
+	dictionary->latest = NULL;
+	dictionary->cells_remaining = DICT_INIT_SIZE_CELLS;
 
 	// open file where we'll write the contents of the dictionary to
-	if ( (d->fp = fopen(fn, "w")) == NULL)
+	if ( (dictionary->fp = fopen(fn, "w")) == NULL)
 	{
 		fprintf(stderr, "error opening file %s\n", fn);
 		return false;
@@ -247,9 +247,9 @@ dict_init(dictionary_t *d, const char *fn)
 }
 
 cell_t *
-dict_lookup_word(const dictionary_t *d, const token_t *t, word_t *w)
+dict_lookup_word(const dictionary_t *dictionary, const token_t *t, word_t *w)
 {
-	cell_t *cur = d->latest;
+	cell_t *cur = dictionary->latest;
 	while (cur)
 	{
 		w->cwp = read_word(cur, w);
@@ -262,34 +262,34 @@ dict_lookup_word(const dictionary_t *d, const token_t *t, word_t *w)
 }
 
 cell_t *
-dict_append_word(dictionary_t *d, const char flags, const token_t *token)
+dict_append_word(dictionary_t *dictionary, const char flags, const token_t *token)
 {
 #define CELLS_PER_WORD sizeof(word_t)/sizeof(cell_t)
-	assert(d->cells_remaining > CELLS_PER_WORD);
+	assert(dictionary->cells_remaining > CELLS_PER_WORD);
 	word_t w;
-	w.prev = d->latest;
+	w.prev = dictionary->latest;
 	w.flags = flags;
 	w.token = *token;
 
-	d->latest = d->here;
-	d->here = write_word(d->here, &w);
-	d->cells_remaining -= (d->here - d->latest);
+	dictionary->latest = dictionary->here;
+	dictionary->here = write_word(dictionary->here, &w);
+	dictionary->cells_remaining -= (dictionary->here - dictionary->latest);
 
 	char str[TOKEN_LENGTH+1] = {0};
 	memcpy(str, token->buf, token->size);
-	fprintf(d->fp, "%lX:%s\n", (int64_t)d->here, str);
+	fprintf(dictionary->fp, "%lX:%s\n", (int64_t)dictionary->here, str);
 
-	return d->here;
+	return dictionary->here;
 }
 
 void
-dict_append_cell(dictionary_t *d, const cell_t data)
+dict_append_cell(dictionary_t *dictionary, const cell_t data)
 {
-	*(d->here) = data;
-	fprintf(d->fp, "%lX:%ld\n", (int64_t)d->here, (int64_t)data);
+	*(dictionary->here) = data;
+	fprintf(dictionary->fp, "%lX:%ld\n", (int64_t)dictionary->here, (int64_t)data);
 
-	++d->here;
-	--d->cells_remaining;
+	++dictionary->here;
+	--dictionary->cells_remaining;
 }
 
 /*
@@ -297,17 +297,17 @@ dict_append_cell(dictionary_t *d, const cell_t data)
  */
 #define STACK_SIZE 100
 
-dictionary_t d;
+dictionary_t dictionary;
 #define ADD_ATOMIC(label, buf, flags)\
 cell_t *CWP_##label;                        \
 {                                         \
 	const token_t t = {(char)(sizeof(buf)-1), buf};\
-	CWP_##label = dict_append_word(&d, flags, &t); \
-	dict_append_cell(&d, (cell_t)&&label);    \
+	CWP_##label = dict_append_word(&dictionary, flags, &t); \
+	dict_append_cell(&dictionary, (cell_t)&&label);    \
 }                                         \
 
-#define COMMA(x) dict_append_cell(&d, (cell_t)x);
-#define CWP(x) dict_append_cell(&d, (cell_t)CWP_##x);
+#define COMMA(x) dict_append_cell(&dictionary, (cell_t)x);
+#define CWP(x) dict_append_cell(&dictionary, (cell_t)CWP_##x);
 
 int
 main(int argc, char *argv[])
@@ -315,7 +315,7 @@ main(int argc, char *argv[])
 	token_t itok; // latest token read by INTERPRET
 	token_t wtok; // latest token read by WORD
 	word_t w;     // last word looked up
-	cell_t a, b, c; // temporary registers
+	cell_t a, b, c, d; // temporary registers
 	cell_t *W; // working register
 	cell_t *IP; // interpreter pointer
 	cell_t base = 10;
@@ -324,7 +324,7 @@ main(int argc, char *argv[])
 	INIT_STACK(RS, cell_t, STACK_SIZE)
 	INIT_STACK(PS, cell_t, STACK_SIZE)
 
-	if (!dict_init(&d, ".jforth_dict"))
+	if (!dict_init(&dictionary, ".jforth_dict"))
 		return 1;
 
 	ADD_ATOMIC(ADD, "+", F_NOTSET)
@@ -357,6 +357,7 @@ main(int argc, char *argv[])
 	ADD_ATOMIC(STORE, "!", F_NOTSET)
 	ADD_ATOMIC(SUB, "-", F_NOTSET)
 	ADD_ATOMIC(SWAP, "SWAP", F_NOTSET)
+	ADD_ATOMIC(TWOSWAP, "2SWAP", F_NOTSET)
 	ADD_ATOMIC(TOCFA, ">CFA", F_NOTSET)
 	ADD_ATOMIC(WORD, "WORD", F_NOTSET)
 	ADD_ATOMIC(ZEQU, "0=", F_NOTSET)
@@ -387,7 +388,7 @@ main(int argc, char *argv[])
 
 // : QUIT INTERPRET BRANCH -2 ;
 	const token_t quit = {4, "QUIT"};
-	dict_append_word(&d, F_NOTSET, &quit);
+	dict_append_word(&dictionary, F_NOTSET, &quit);
 	COMMA(&&DOCOL)
 	CWP(INTERPRET)
 	CWP(BRANCH)
@@ -421,7 +422,7 @@ main_loop:
 	goto *(void *)*W;	\
 
 	// Start by running the QUIT word
-	dict_lookup_word(&d, &quit, &w);
+	dict_lookup_word(&dictionary, &quit, &w);
 	IP = w.cwp;
 	W = IP;
 	goto *(void *)(*(cell_t *)W);
@@ -640,7 +641,7 @@ CHAR: // ( -- char) word
 COMMA: // , ( a -- )
 	P(COMMA)
 	POP(PS, a)
-	dict_append_cell(&d, a);
+	dict_append_cell(&dictionary, a);
 	NEXT
 
 CREATE: // CREATE ( addr len -- )
@@ -650,7 +651,7 @@ CREATE: // CREATE ( addr len -- )
 	{
 		token_t token;
 		token_copy(&token, (char *)b, (unsigned int)a);
-		dict_append_word(&d, F_NOTSET, &token);
+		dict_append_word(&dictionary, F_NOTSET, &token);
 		COMMA(&&DOCOL)
 	}
 	NEXT
@@ -712,7 +713,7 @@ FIND: // ( len addr -- addr )
 	{
 		token_t t;
 		token_copy(&t, (char *)b, (unsigned int)a);
-		PUSH(PS, (cell_t)(dict_lookup_word(&d, &t, &w)))
+		PUSH(PS, (cell_t)(dict_lookup_word(&dictionary, &t, &w)))
 	}
 	NEXT
 
@@ -725,13 +726,13 @@ GT: // > ( a b -- a>b)
 
 HERE: // ( -- addr )
 	P(HERE)
-	PUSH(PS, (cell_t)&(d.here))
+	PUSH(PS, (cell_t)&(dictionary.here))
 	NEXT
 
 HIDE: // ( -- )
 	P(HIDE)
 	{
-		char *flag_ptr = GET_FLAGPTR(d.latest);
+		char *flag_ptr = GET_FLAGPTR(dictionary.latest);
 		*flag_ptr ^= F_HIDDEN;
 	}
 	NEXT
@@ -748,7 +749,7 @@ HIDDEN: // ( addr -- )
 IMMEDIATE: // ( -- )
 	P(IMMEDIATE)
 	{
-		char *flag_ptr = GET_FLAGPTR(d.latest);
+		char *flag_ptr = GET_FLAGPTR(dictionary.latest);
 		*flag_ptr ^= F_IMMED;
 	}
 	NEXT
@@ -769,7 +770,7 @@ INTERPRET: // ( -- )
 		word_t w;
 		int64_t n;
 
-		if (!dict_lookup_word(&d, &itok, &w))
+		if (!dict_lookup_word(&dictionary, &itok, &w))
 		{
 			// word not in dictionary
 			if (!token_tonum(&itok, base, &n))
@@ -791,7 +792,7 @@ INTERPRET: // ( -- )
 			W = w.cwp;
 			if (state == EXECUTE || (w.flags & F_IMMED))
 			{
-				if (state == COMPILE) fprintf(d.fp, "%s\n", str);
+				if (state == COMPILE) fprintf(dictionary.fp, "%s\n", str);
 					goto *(void *)*W; // word has to be executed immediately
 			}
 		}
@@ -799,14 +800,14 @@ INTERPRET: // ( -- )
 		P(COMPILING)
 		if (islit)
 		{
-			fprintf(d.fp, "LIT ");
+			fprintf(dictionary.fp, "LIT ");
 			CWP(LIT)
-			fprintf(d.fp, "%ld ", n);
+			fprintf(dictionary.fp, "%ld ", n);
 			COMMA(n)
 		}
 		else
 		{
-			fprintf(d.fp, "%s ", str);
+			fprintf(dictionary.fp, "%s ", str);
 			COMMA(W)
 		}
 		NEXT
@@ -819,7 +820,7 @@ LBRAC: // [ ( -- )
 
 LATEST: // ( -- addr )
 	P(LATEST)
-	PUSH(PS, (cell_t)&(d.latest))
+	PUSH(PS, (cell_t)&(dictionary.latest))
 	NEXT
 
 LIT: // ( -- *IP )
@@ -866,8 +867,20 @@ SWAP: // ( a b -- b a )
 	P(SWAP)
 	POP(PS, b)
 	POP(PS, a)
+	PUSH(PS, a)
+	PUSH(PS, b)
+	NEXT
+
+TWOSWAP: // ( a b c d -- b a d c )
+	P(2SWAP)
+	POP(PS, a)
+	POP(PS, b)
+	POP(PS, c)
+	POP(PS, d)
 	PUSH(PS, b)
 	PUSH(PS, a)
+	PUSH(PS, d)
+	PUSH(PS, c)
 	NEXT
 
 TOCFA: // >CFA ( addr -- addr )
