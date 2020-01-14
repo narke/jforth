@@ -337,6 +337,7 @@ main(int argc, char *argv[])
 	ADD_ATOMIC(DIVMOD, "/MOD", F_NOTSET)
 	ADD_ATOMIC(DOCOL, "DOCOL", F_NOTSET)
 	ADD_ATOMIC(DROP, "DROP", F_NOTSET)
+	ADD_ATOMIC(TWODROP, "2DROP", F_NOTSET)
 	ADD_ATOMIC(DUP, "DUP", F_NOTSET)
 	ADD_ATOMIC(EMIT, "EMIT", F_NOTSET)
 	ADD_ATOMIC(EXIT, "EXIT", F_NOTSET)
@@ -672,6 +673,13 @@ DROP: // ( a -- )
 	P(DROP)
 	POP(PS, a)
 	NEXT
+
+TWODROP: // ( a -- )
+	P(2DROP)
+	POP(PS, a)
+	POP(PS, a)
+	NEXT
+
 
 DUP: // ( a -- a a )
 	P(DUP)
