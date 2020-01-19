@@ -366,6 +366,7 @@ main(int argc, char *argv[])
 	ADD_ATOMIC(LT, "<", F_NOTSET)
 	ADD_ATOMIC(LTEQ, "<=", F_NOTSET)
 	ADD_ATOMIC(EQ, "=", F_NOTSET)
+	ADD_ATOMIC(NEQ, "<>", F_NOTSET)
 	ADD_ATOMIC(KEY, "KEY", F_NOTSET)
 	ADD_ATOMIC(DSPBOT, "DSP@", F_NOTSET)
 	ADD_ATOMIC(DSPTOP, "DSP0", F_NOTSET)
@@ -373,6 +374,7 @@ main(int argc, char *argv[])
 	ADD_ATOMIC(NROT, "-ROT", F_NOTSET)
 	ADD_ATOMIC(AND, "AND", F_NOTSET)
 	ADD_ATOMIC(OR, "OR", F_NOTSET)
+	ADD_ATOMIC(XOR, "XOR", F_NOTSET)
 	ADD_ATOMIC(INVERT, "INVERT", F_NOTSET)
 	ADD_ATOMIC(STATE, "STATE", F_NOTSET)
 	ADD_ATOMIC(CSTORE, "C!", F_NOTSET)
@@ -593,6 +595,14 @@ EQ: // ( a b -- a==b )
 	POP(PS, a)
 	PUSH(PS, (cell_t)(a==b))
 	NEXT
+
+NEQ: // ( a b -- a!=b )
+	P(NEQ)
+	POP(PS, a)
+	POP(PS, b)
+	PUSH(PS, (cell_t)(a!=b))
+	NEXT
+
 
 LT: // < ( a b -- a<b)
 	P(LT)
@@ -920,9 +930,16 @@ ONEPLUS: // ( a -- a+1 )
 	PUSH(PS, a+1)
 	NEXT
 
-ONEMINUS: // (a -- a-1 )
+ONEMINUS: // ( a -- a-1 )
 	P(ONEMINUS)
 	POP(PS, a)
 	PUSH(PS, a-1)
+	NEXT
+
+XOR: // ( a b -- a^b )
+	P(XOR)
+	POP(PS, a)
+	POP(PS, b)
+	PUSH(PS, a^b)
 	NEXT
 }
