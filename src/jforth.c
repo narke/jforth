@@ -385,6 +385,9 @@ main(int argc, char *argv[])
 	ADD_ATOMIC(TOR, ">R", F_NOTSET)
 	ADD_ATOMIC(FROMR, "R>", F_NOTSET)
 	ADD_ATOMIC(DOT, ".", F_NOTSET)
+	ADD_ATOMIC(ONEPLUS, "1+", F_NOTSET)
+	ADD_ATOMIC(ONEMINUS, "1-", F_NOTSET)
+
 
 // : QUIT INTERPRET BRANCH -2 ;
 	const token_t quit = {4, "QUIT"};
@@ -909,5 +912,17 @@ DOT:
 	P(DOT)
 	POP(PS, a)
 	fprintf(stdout, "%ld ", a);
+	NEXT
+
+ONEPLUS: // ( a -- a+1 )
+	P(ONEPLUS)
+	POP(PS, a)
+	PUSH(PS, a+1)
+	NEXT
+
+ONEMINUS: // (a -- a-1 )
+	P(ONEMINUS)
+	POP(PS, a)
+	PUSH(PS, a-1)
 	NEXT
 }
