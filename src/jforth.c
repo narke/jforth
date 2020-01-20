@@ -389,6 +389,7 @@ main(int argc, char *argv[])
 	ADD_ATOMIC(DOT, ".", F_NOTSET)
 	ADD_ATOMIC(ONEPLUS, "1+", F_NOTSET)
 	ADD_ATOMIC(ONEMINUS, "1-", F_NOTSET)
+	ADD_ATOMIC(CMOVE, "CMOVE", F_NOTSET)
 
 
 // : QUIT INTERPRET BRANCH -2 ;
@@ -941,5 +942,13 @@ XOR: // ( a b -- a^b )
 	POP(PS, a)
 	POP(PS, b)
 	PUSH(PS, a^b)
+	NEXT
+
+CMOVE: // (addr1 addr2 u -- )
+	P(CMOVE)
+	POP(PS, c)
+	POP(PS, b)
+	POP(PS, a)
+	memcpy((void *)b, (void *)a, c);
 	NEXT
 }
