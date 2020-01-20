@@ -599,8 +599,8 @@ EQ: // ( a b -- a==b )
 
 NEQ: // ( a b -- a!=b )
 	P(NEQ)
-	POP(PS, a)
 	POP(PS, b)
+	POP(PS, a)
 	PUSH(PS, (cell_t)(a!=b))
 	NEXT
 
@@ -694,7 +694,6 @@ TWODROP: // ( a -- )
 	POP(PS, a)
 	POP(PS, a)
 	NEXT
-
 
 DUP: // ( a -- a a )
 	P(DUP)
@@ -887,14 +886,14 @@ SWAP: // ( a b -- b a )
 
 TWOSWAP: // ( a b c d -- b a d c )
 	P(2SWAP)
-	POP(PS, a)
-	POP(PS, b)
-	POP(PS, c)
 	POP(PS, d)
-	PUSH(PS, b)
-	PUSH(PS, a)
-	PUSH(PS, d)
+	POP(PS, c)
+	POP(PS, b)
+	POP(PS, a)
 	PUSH(PS, c)
+	PUSH(PS, d)
+	PUSH(PS, a)
+	PUSH(PS, b)
 	NEXT
 
 TOCFA: // >CFA ( addr -- addr )
@@ -939,8 +938,8 @@ ONEMINUS: // ( a -- a-1 )
 
 XOR: // ( a b -- a^b )
 	P(XOR)
-	POP(PS, a)
 	POP(PS, b)
+	POP(PS, a)
 	PUSH(PS, a^b)
 	NEXT
 
