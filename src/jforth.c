@@ -507,13 +507,13 @@ STATE: // ( -- addr )
 	NEXT
 
 INVERT: // ( a -- ~a )
-	P(AND)
+	P(INVERT)
 	POP(PS, a)
 	PUSH(PS, ~a)
 	NEXT
 
 OR: // ( a b -- a|b )
-	P(AND)
+	P(OR)
 	POP(PS, b)
 	POP(PS, a)
 	PUSH(PS, a|b)
@@ -547,14 +547,14 @@ ROT : // ( a b c -- b c a )
 	NEXT
 
 LTEQ: // <= ( a b -- a<=b)
-	P(GT)
+	P(LTEQ)
 	POP(PS, b)
 	POP(PS, a)
 	PUSH(PS, (cell_t)(a<=b))
 	NEXT
 
 GTEQ: // >= ( a b -- a>=b)
-	P(GT)
+	P(GTEQ)
 	POP(PS, b)
 	POP(PS, a)
 	PUSH(PS, (cell_t)(a>=b))
